@@ -10,7 +10,9 @@ import json
 class ReportController(report.ReportController):
     @route()
     def report_routes(self, reportname, docids=None, converter=None, **data):
+        print('report routesx xxx' , converter)
         if converter == 'xlsx':
+            print(' my xlsx report converting')
             report = request.env['ir.actions.report']._get_report_from_name(
                 reportname)
             context = dict(request.env.context)
@@ -38,6 +40,7 @@ class ReportController(report.ReportController):
                     content_disposition(report.report_file + '.xlsx')
                 )
             ]
+            print('response', xlsxhttpheaders)
             return request.make_response(xlsx, headers=xlsxhttpheaders)
         return super(ReportController, self).report_routes(
             reportname, docids, converter, **data

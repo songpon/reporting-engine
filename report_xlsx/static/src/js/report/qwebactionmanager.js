@@ -6,13 +6,16 @@ odoo.define('report_xlsx.report', function(require){
 var ActionManager= require('web.ActionManager');
 var crash_manager = require('web.crash_manager');
 var framework = require('web.framework');
-
+var session = require('web.session');
 ActionManager.include({
-    ir_actions_report: function (action, options){
+
+    _executeReportAction: function (action, options){
         var self = this;
         var cloned_action = _.clone(action);
         if (cloned_action.report_type === 'xlsx') {
             framework.blockUI();
+
+            // _makeReportUrls
             var report_xlsx_url = 'report/xlsx/' + cloned_action.report_name;
             if (_.isUndefined(cloned_action.data) ||
                 _.isNull(cloned_action.data) ||
@@ -25,11 +28,14 @@ ActionManager.include({
                 report_xlsx_url += '?options=' + encodeURIComponent(JSON.stringify(cloned_action.data));
                 report_xlsx_url += '&context=' + encodeURIComponent(JSON.stringify(cloned_action.context));
             }
-            self.getSession().get_file({
-                url: report_xlsx_url,
+            
+            // _downloadReport COPY
+            var def = $.Deferred();
+            var blocked  = !session.get_file({
+                url: report_xlsx_url, // << replace
                 data: {data: JSON.stringify([
-                    report_xlsx_url,
-                    cloned_action.report_type
+                        report_xlsx_url,
+                        cloned_action.report_type
                 ])},
                 error: crash_manager.rpc_error.bind(crash_manager),
                 success: function (){
@@ -38,8 +44,19 @@ ActionManager.include({
                     }
                 }
             });
+            if (blocked) {
+                // AAB: this check should be done in get_file service directly,
+                // should not be the concern of the caller (and that way, get_file
+                // could return a deferred)
+                var message = _t('A popup window with your report was blocked. You ' +
+                                 'may need to change your browser settings to allow ' +
+                                 'popup windows for this page.');
+                this.do_warn(_t('Warning'), message, true);
+            }
+            //return def;
+            
             framework.unblockUI();
-            return;
+            return def;
         }
         return self._super(action, options);
     }
